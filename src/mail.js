@@ -61,38 +61,45 @@ export function shouldSkip(mail, ownAddress) {
 export async function prepareReply(mail, config, customFetch = fetch) {
   const ownAddress = typeof config === 'string' ? config : config.address;
   const msConfig = typeof config === 'object' ? config.moysklad : undefined;
+  const sender = mail.from?.value?.[0]?.address || 'неизвестный отправитель';
 
-  if (shouldSkip(mail, ownAddress)) return null;
+  if (shouldSkip(mail, ownAddress)) {
+    console.log(`[INFO] [${new Date().toISOString()}] Письмо от <${sender}> пропущено (служебное, робот или собственный адрес)`);
+    return null;
+  }
+
+  console.log(`[INFO] [${new Date().toISOString()}] Начата обработка письма от <${sender}>, тема: "${mail.subject || 'без темы'}"`);
+
   const attachments = [];
   const errors = [];
 
   for (const attachment of mail.attachments ?? []) {
     if (!/\.xlsx$/i.test(attachment.filename ?? '')) continue;
+    const safeName = attachment.filename.replace(/[\r\n]/g, ' ');
     try {
+      console.log(`[INFO] [${new Date().toISOString()}] Обработка вложения: "${safeName}"`);
       const processedBuffer = await transformXlsx(attachment.content, msConfig, customFetch);
       attachments.push({
         filename: attachment.filename,
         content: processedBuffer,
         contentType: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       });
+      console.log(`[INFO] [${new Date().toISOString()}] Вложение "${safeName}" успешно обработано`);
     } catch (error) {
       if (error instanceof BarcodeNotFoundError) {
-        // Требование п. 2 Рисков:
-        // "Товар с ш/к ... не найден в МойСклад. Пожалуйста, проверьте правильность ш/к в таблице и в МойСклад и повторите попытку"
+        console.warn(`[WARN] [${new Date().toISOString()}] Ошибка во вложении "${safeName}": Товар с ш/к ${error.barcode} не найден в МойСклад`);
         errors.push(error.message);
       } else if (error instanceof MoySkladUnavailableError) {
-        // Требование п. 3 Рисков:
-        // "API МойСклад временно недоступен. Пожалуйста, повторите попытку позже"
+        console.error(`[ERROR] [${new Date().toISOString()}] Сбой МойСклад при обработке "${safeName}": ${error.details || error.message}`);
         errors.push(error.message);
       } else if (error instanceof InvalidTableError) {
-        const safeName = attachment.filename.replace(/[\r\n]/g, ' ');
+        console.warn(`[WARN] [${new Date().toISOString()}] Некорректная структура файла во вложении "${safeName}"`);
         errors.push(`Таблица некорректна: ${safeName}`);
       } else {
         throw error;
       }
     }
   }
-
   // Если во входящем письме вообще не было XLSX файлов и ошибок
   if (!attachments.length && !errors.length) return null;
 
@@ -153,8 +160,8 @@ export async function processMessage(source, { config, transport, identity, cust
   reply.messageId = `<xlsx-${digest}@${config.address.split('@')[1]}>`;
   try {
     await transport.sendMail(reply);
-  } catch (error) {
-    if (error.responseCode >= 500 && error.responseCode < 600) {
+    console.log(`[SUCCESS] [${new Date().toISOString()}] Ответное письмо успешно отправлено на <${reply.to.address}> (вложений: ${reply.attachments?.length || 0})`);
+  } catch (error) {    if (error.responseCode >= 500 && error.responseCode < 600) {
       throw new PermanentDeliveryError(error.responseCode);
     }
     throw error;

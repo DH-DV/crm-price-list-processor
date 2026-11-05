@@ -120,8 +120,11 @@ export async function transformXlsx(content, moyskladConfig, customFetch = fetch
 
   // 3. Запрос в API МойСклад по всем найденным штрихкодам
   const barcodes = items.map((it) => it.barcode).filter(Boolean);
-  const assortmentMap = await fetchAssortmentByBarcodes(barcodes, moyskladConfig, customFetch);
+  const uniqueCount = new Set(barcodes).size;
+  const chunkCount = Math.ceil(uniqueCount / 10);
+  console.log(`[INFO] [${new Date().toISOString()}] Отобрано позиций с количеством > 0: ${items.length}, уникальных штрихкодов: ${uniqueCount}, чанков МойСклад: ${chunkCount}`);
 
+  const assortmentMap = await fetchAssortmentByBarcodes(barcodes, moyskladConfig, customFetch);
   // 4. Формирование итогового документа Excel
   const result = new ExcelJS.Workbook();
   const output = result.addWorksheet('1');
