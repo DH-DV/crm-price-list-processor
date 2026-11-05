@@ -1,0 +1,19 @@
+services:
+  mail-processor:
+    build: .
+    init: true
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      STATE_FILE: /app/data/state.json
+    volumes:
+      - mail-state:/app/data
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+
+volumes:
+  mail-state:

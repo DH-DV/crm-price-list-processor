@@ -1,0 +1,20 @@
+{
+  "name": "yandex-xlsx-mail-processor",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "engines": {
+    "node": ">=20.19.0"
+  },
+  "scripts": {
+    "start": "node --env-file=.env src/index.js",
+    "start:server": "node src/index.js",
+    "test": "node --test"
+  },
+  "dependencies": {
+    "exceljs": "^4.4.0",
+    "imapflow": "^1.0.181",
+    "mailparser": "^3.7.2",
+    "nodemailer": "^10.3.1"
+  }
+}
