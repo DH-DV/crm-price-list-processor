@@ -38,16 +38,13 @@ try {
     throw error;
   }
 } catch (error) {
-  // Не выводим сообщения сторонних библиотек: они могут содержать данные письма или авторизации.
   const code = /^[A-Z0-9_]{1,40}$/.test(String(error.code)) ? String(error.code) : undefined;
   const smtpCode = Number.isInteger(error.responseCode) ? error.responseCode : undefined;
   console.error(JSON.stringify({
     event: 'service_stopped',
     code,
     smtpCode,
-    reason: error instanceof StateError ? error.message : 'Ошибка конфигурации, соединения или обработки',
+    reason: error instanceof StateError ? error.message : (error.message || 'Ошибка конфигурации, соединения или обработки'),
   }));
   process.exitCode = 1;
-} finally {
-  transport?.close();
 }
