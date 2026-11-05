@@ -195,18 +195,17 @@ export async function transformXlsx(content, moyskladConfig, customFetch = fetch
       // в. A = "Модификация"
       // г. B = id модификации
       // д. C = B[n] (штрихкод)
-      // е. D = id модификации
+      // е. D = product.id (UUID товара модификации)
       // ж. E = I[n] (цена)
       // з. F = J[n] (количество)
       output.addRow([
         'Модификация',
         msEntity.id,
         item.barcode,
-        msEntity.id,
+        parentProductId,
         item.price,
         item.quantity,
-      ]);
-    }
+      ]);    }
   }
 
   return Buffer.from(await result.xlsx.writeBuffer());
