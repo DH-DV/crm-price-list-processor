@@ -34,9 +34,13 @@ export function loadConfig(env = process.env) {
       secure: true,
       auth: { user, pass },
       logger: false,
-      maxIdleTime: 240_000,
-    },
-    smtp: {
+      maxIdleTime: 60_000,
+      socketTimeout: 0,
+      tls: {
+        keepAlive: true,
+        keepAliveInitialDelay: 15_000,
+      },
+    },    smtp: {
       host: env.SMTP_HOST || 'smtp.yandex.ru',
       port: port(env.SMTP_PORT, 587),
       secure: false,
