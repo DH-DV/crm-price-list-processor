@@ -110,37 +110,7 @@ try {
       });
     }
   }
-
-      // Если ошибка фатальная (пароль, настройки) — останавливаем сервис
-      if (isFatalError(error)) {
-        console.error(`[FATAL] [${new Date().toISOString()}] Фатальная ошибка: ${error.message}`);
-        throw error;
-      }
-
-      // Если сетевой сбой / обрыв со стороны Яндекса — выполняем паузу и переподключаемся
-      const delay = backoffDelays[Math.min(failureCount, backoffDelays.length - 1)];
-      failureCount++;
-
-      console.warn(
-        `[WARN] [${new Date().toISOString()}] Соединение с IMAP разорвано (${error.message || 'сетевой сбой'}). Повторное подключение через ${delay} сек... (попытка ${failureCount})`,
-      );
-
-      // Ждем паузу с возможностью мгновенной отмены по сигналу остановки
-      await new Promise((resolve) => {
-        const timer = setTimeout(resolve, delay * 1000);
-        controller.signal.addEventListener(
-          'abort',
-          () => {
-            clearTimeout(timer);
-            resolve();
-          },
-          { once: true },
-        );
-      });
-    }
-  }
-} catch (error) {
-  if (transport && !controller.signal.aborted) {
+} catch (error) {  if (transport && !controller.signal.aborted) {
     try {
       const config = loadConfig();
       if (config.adminAddress) {
