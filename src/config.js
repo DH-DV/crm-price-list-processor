@@ -38,8 +38,8 @@ export function loadConfig(env = process.env) {
     },
     smtp: {
       host: env.SMTP_HOST || 'smtp.yandex.ru',
-      port: port(env.SMTP_PORT, 465),
-      secure: true,
+      port: port(env.SMTP_PORT, 587),
+      secure: false,
       auth: { user, pass },
       logger: false,
       debug: false,
