@@ -68,8 +68,9 @@ try {
 
   console.log(`[INFO] [${new Date().toISOString()}] Сервис запущен. Автоматический reconnect включен.`);
 
-  // Паузы переподключения в секундах: 1 -> 2 -> 5 -> 10 -> 15 (максимум 15 секунд)
-  const backoffDelays = [1, 2, 5, 10, 15];  let failureCount = 0;
+  // Фиксированная пауза переподключения в секундах
+  const reconnectDelay = 15;
+  let failureCount = 0;
 
   // Основной цикл поддержания постоянного соединения
   while (!controller.signal.aborted) {
@@ -81,6 +82,34 @@ try {
       if (controller.signal.aborted) {
         break;
       }
+
+      // Если ошибка фатальная (пароль, настройки) — останавливаем сервис
+      if (isFatalError(error)) {
+        console.error(`[FATAL] [${new Date().toISOString()}] Фатальная ошибка: ${error.message}`);
+        throw error;
+      }
+
+      // Если сетевой сбой / обрыв со стороны Яндекса — выполняем паузу и переподключаемся
+      failureCount++;
+
+      console.warn(
+        `[WARN] [${new Date().toISOString()}] Соединение с IMAP разорвано (${error.message || 'сетевой сбой'}). Повторное подключение через ${reconnectDelay} сек... (попытка ${failureCount})`,
+      );
+
+      // Ждем паузу с возможностью мгновенной отмены по сигналу остановки
+      await new Promise((resolve) => {
+        const timer = setTimeout(resolve, reconnectDelay * 1000);
+        controller.signal.addEventListener(
+          'abort',
+          () => {
+            clearTimeout(timer);
+            resolve();
+          },
+          { once: true },
+        );
+      });
+    }
+  }
 
       // Если ошибка фатальная (пароль, настройки) — останавливаем сервис
       if (isFatalError(error)) {
