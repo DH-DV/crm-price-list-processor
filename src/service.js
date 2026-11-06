@@ -42,14 +42,22 @@ export async function runService(config, store, transport, signal) {
     client.close();
   };
   client.on('exists', notify);
-  client.on('close', () => fail(new Error('Соединение IMAP закрыто')));
-  client.on('error', fail);
+  client.on('error', (err) => {
+    fail(err);
+  });
+  client.on('close', () => {
+    fail(failure || new Error('Соединение IMAP закрыто сервером'));
+  });
   signal.addEventListener('abort', stop, { once: true });
   try {
     if (signal.aborted) return;
-    await client.connect();
-    await client.mailboxOpen(config.mailbox);
-    await store.initialize(client.mailbox.uidValidity, client.mailbox.uidNext);
+    try {
+      await client.connect();
+    } catch (connectError) {
+      fail(connectError);
+      throw connectError;
+    }
+    await client.mailboxOpen(config.mailbox);    await store.initialize(client.mailbox.uidValidity, client.mailbox.uidNext);
     while (!signal.aborted) {
       if (failure) throw failure;
       pending = false;
