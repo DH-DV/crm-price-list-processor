@@ -321,6 +321,24 @@ test('защита от циклов автоматических ответов
   assert.equal(shouldSkip(bounce, 'own@example.org'), true);
 });
 
+test('фильтрация по белому списку разрешенных отправителей allowedSenders', () => {
+  const allowed = ['vip@client.ru', 'partner@firm.org'];
+
+  const mailFromAllowed = {
+    from: { value: [{ address: 'VIP@Client.RU' }] }, // проверка toLowerCase
+    headers: new Map(),
+  };
+  assert.equal(shouldSkip(mailFromAllowed, 'own@example.org', allowed), false);
+
+  const mailFromStranger = {
+    from: { value: [{ address: 'stranger@spam.com' }] },
+    headers: new Map(),
+  };
+  assert.equal(shouldSkip(mailFromStranger, 'own@example.org', allowed), true);
+
+  // Если список не задан - письмо не фильтруется
+  assert.equal(shouldSkip(mailFromStranger, 'own@example.org', undefined), false);
+});
 test('первый запуск пропускает старые UID, перезапуск сохраняет границу', async () => {
   const store = memoryStore();
   await store.initialize(123n, 51);

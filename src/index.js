@@ -68,9 +68,8 @@ try {
 
   console.log(`[INFO] [${new Date().toISOString()}] Сервис запущен. Автоматический reconnect включен.`);
 
-  // Экспоненциальные паузы переподключения в секундах: 1 -> 2 -> 5 -> 10 -> 20 -> 30 -> 60
-  const backoffDelays = [1, 2, 5, 10, 20, 30, 60];
-  let failureCount = 0;
+  // Паузы переподключения в секундах: 1 -> 2 -> 5 -> 10 -> 15 (максимум 15 секунд)
+  const backoffDelays = [1, 2, 5, 10, 15];  let failureCount = 0;
 
   // Основной цикл поддержания постоянного соединения
   while (!controller.signal.aborted) {

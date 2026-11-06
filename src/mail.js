@@ -19,16 +19,23 @@ import { BarcodeNotFoundError, MoySkladUnavailableError } from './moysklad.js';
 
 /**
  * Проверяет, следует ли пропустить обработку входящего письма во избежание почтовых петель,
- * спама и ответов на служебные рассылки.
+ * спама, ответов на служебные рассылки, а также фильтрации по белому списку отправителей.
  *
  * @param {object} mail - Распарсенное входящее письмо от mailparser.
  * @param {string} ownAddress - Собственный email-адрес бота.
+ * @param {string[]} [allowedSenders] - Опциональный массив разрешенных адресов отправителей.
  * @returns {boolean} true, если письмо требуется пропустить без ответа.
  */
-export function shouldSkip(mail, ownAddress) {
+export function shouldSkip(mail, ownAddress, allowedSenders) {
   const from = mail.from?.value ?? [];
   if (from.length !== 1 || !from[0].address) return true;
   const sender = from[0].address.toLowerCase();
+
+  // Если задан белый список разрешенных адресов - пропускаем все адреса не из списка
+  if (Array.isArray(allowedSenders) && allowedSenders.length > 0 && !allowedSenders.includes(sender)) {
+    return true;
+  }
+
   if (sender === ownAddress.toLowerCase()) return true;
   if (/^(mailer-daemon|postmaster)@/i.test(sender)) return true;
   const automatic = mail.headers.get('auto-submitted');
@@ -54,22 +61,23 @@ export function shouldSkip(mail, ownAddress) {
  * - Если таблица некорректна -> отправляет сообщение об ошибке формата.
  *
  * @param {object} mail - Распарсенное письмо.
- * @param {object} config - Общая конфигурация приложения ({ address, moysklad, ... }).
+ * @param {object} config - Общая конфигурация приложения ({ address, moysklad, allowedSenders, ... }).
  * @param {typeof fetch} [customFetch=fetch] - Функция fetch (для тестирования).
  * @returns {Promise<object|null>} Объект параметров письма для Nodemailer или null при пропуске.
  */
 export async function prepareReply(mail, config, customFetch = fetch) {
   const ownAddress = typeof config === 'string' ? config : config.address;
   const msConfig = typeof config === 'object' ? config.moysklad : undefined;
-  const sender = mail.from?.value?.[0]?.address || 'неизвестный отправитель';
+  const allowedSenders = typeof config === 'object' ? config.allowedSenders : undefined;
 
-  if (shouldSkip(mail, ownAddress)) {
-    console.log(`[INFO] [${new Date().toISOString()}] Письмо от <${sender}> пропущено (служебное, робот или собственный адрес)`);
+  // Если письмо не подлежит обработке (чужой отправитель, автоответ или робот) -
+  // молча выходим без логирования и без формирования ответа
+  if (shouldSkip(mail, ownAddress, allowedSenders)) {
     return null;
   }
 
+  const sender = mail.from?.value?.[0]?.address || 'неизвестный отправитель';
   console.log(`[INFO] [${new Date().toISOString()}] Начата обработка письма от <${sender}>, тема: "${mail.subject || 'без темы'}"`);
-
   const attachments = [];
   const errors = [];
 

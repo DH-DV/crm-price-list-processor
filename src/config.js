@@ -24,7 +24,7 @@ export function loadConfig(env = process.env) {
     mailbox: env.IMAP_MAILBOX || 'INBOX',
     stateFile: env.STATE_FILE || './data/state.json',
     adminAddress: env.ADMIN_ADDRESS || undefined,
-    moysklad: {
+    allowedSenders: env.ALLOWED_SENDERS ? JSON.parse(env.ALLOWED_SENDERS) : undefined,    moysklad: {
       apiUrl: env.MOYSKLAD_API_URL || 'https://api.moysklad.ru/api/remap/1.2',
       token: required(env, 'MOYSKLAD_TOKEN'),
     },
